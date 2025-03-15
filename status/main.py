@@ -11,7 +11,7 @@ import io
 import base64
 from jinja2 import Template
 
-@register("状态监控", "腾讯元宝&Meguminlove", "增强版状态监控插件", "1.1.2", "https://github.com/Meguminlove/astrbot_plugin_server_status")
+@register("状态监控", "腾讯元宝&Meguminlove", "增强版状态监控插件", "1.1.4", "https://github.com/Meguminlove/astrbot_plugin_server_status")
 class ServerMonitor(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -57,37 +57,39 @@ class ServerMonitor(Star):
             disk = psutil.disk_usage('/')
             net = psutil.net_io_counters()
 
-            # 构建状态数据
-            labels = ['CPU', '内存', '磁盘']
-            sizes = [cpu_usage, mem.percent, disk.percent]
-            colors = ['lightgray', 'gray', 'darkgray']
-
             # 生成饼状图
-            buffer = io.BytesIO()
-            plt.figure(figsize=(6, 6))
-            plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-            plt.axis('equal')
-            plt.savefig(buffer, format='png')
-            buffer.seek(0)
-            image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
-            plt.clf()
+            cpu_image_base64 = self._create_pie_chart(cpu_usage, 'CPU')
+            mem_image_base64 = self._create_pie_chart(mem.percent, 'MEM')
+            disk_image_base64 = self._create_pie_chart(disk.percent, 'DISK')
 
             # Jinja2 模板
             TMPL = """
-            <div style="text-align: center;">
-                <h1>服务器状态报告</h1>
-                <img src="data:image/png;base64,{{ image_base64 }}" alt="服务器状态饼状图">
-                <p>运行时间: {{ uptime }}</p>
-                <p>系统负载: {{ load_avg }}</p>
-                <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
-                <p>当前时间: {{ current_time }}</p>
+            <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+                <div style="text-align: center;">
+                    <h1>服务器状态报告</h1>
+                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+                        <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
+                        <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
+                        <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+                    </div>
+                    <div>
+                        <p>系统信息: {{ system_info }}</p>
+                        <p>运行时间: {{ uptime }}</p>
+                        <p>系统负载: {{ load_avg }}</p>
+                        <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
+                        <p>当前时间: {{ current_time }}</p>
+                    </div>
+                </div>
             </div>
             """
 
             # 渲染 HTML
             template = Template(TMPL)
             html = template.render(
-                image_base64=image_base64,
+                cpu_image=cpu_image_base64,
+                mem_image=mem_image_base64,
+                disk_image=disk_image_base64,
+                system_info=f"{platform.system()} {platform.release()}",
                 uptime=self._get_uptime(),
                 load_avg=self._get_load_avg(),
                 net_sent=self._bytes_to_mb(net.bytes_sent),
@@ -96,11 +98,26 @@ class ServerMonitor(Star):
             )
 
             # 生成图片
-            url = await self.html_render(html)
+            url = await self.html_render(html, {})
             yield event.image_result(url)
 
         except Exception as e:
             yield event.plain_result(f"⚠️ 状态获取失败: {str(e)}")
+
+    def _create_pie_chart(self, value: float, label: str) -> str:
+        """创建饼状图"""
+        buffer = io.BytesIO()
+        plt.figure(figsize=(4, 4))
+        labels = [label, '']
+        sizes = [value, 100 - value]
+        colors = ['gray', 'lightgray']
+        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        plt.axis('equal')
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+        plt.clf()
+        return image_base64
 
     @staticmethod
     def _bytes_to_gb(bytes_num: int) -> float:
