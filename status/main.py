@@ -7,11 +7,11 @@ import asyncio
 import os
 from typing import Optional
 import matplotlib.pyplot as plt
-import seaborn as sns
 import io
 import base64
+from jinja2 import Template
 
-@register("状态监控", "Meguminlove&YANFD", "状态监控插件", "1.0.0", "https://github.com/yanfd/yanfdPlugin")
+@register("状态监控", "腾讯元宝&Meguminlove", "增强版状态监控插件", "1.1.2", "https://github.com/Meguminlove/astrbot_plugin_server_status")
 class ServerMonitor(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -57,48 +57,50 @@ class ServerMonitor(Star):
             disk = psutil.disk_usage('/')
             net = psutil.net_io_counters()
 
-            # 构建状态信息
-            status_data = {
-                "系统信息": f"{platform.system()} {platform.release()}",
-                "运行时间": self._get_uptime(),
-                "系统负载": self._get_load_avg(),
-                "CPU使用率": f"{cpu_usage}%",
-                "内存使用": f"{self._bytes_to_gb(mem.used)}G/{self._bytes_to_gb(mem.total)}G ({mem.percent}%)",
-                "磁盘使用": f"{self._bytes_to_gb(disk.used)}G/{self._bytes_to_gb(disk.total)}G ({disk.percent}%)",
-                "网络流量": f"↑{self._bytes_to_mb(net.bytes_sent)}MB ↓{self._bytes_to_mb(net.bytes_recv)}MB",
-                "当前时间": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
+            # 构建状态数据
+            labels = ['CPU', '内存', '磁盘']
+            sizes = [cpu_usage, mem.percent, disk.percent]
+            colors = ['lightgray', 'gray', 'darkgray']
 
-            # 绘制图表
-            image_base64 = self._create_status_image(status_data)
-            yield event.image_result(base64_image=image_base64)
+            # 生成饼状图
+            buffer = io.BytesIO()
+            plt.figure(figsize=(6, 6))
+            plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            plt.axis('equal')
+            plt.savefig(buffer, format='png')
+            buffer.seek(0)
+            image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+            plt.clf()
+
+            # Jinja2 模板
+            TMPL = """
+            <div style="text-align: center;">
+                <h1>服务器状态报告</h1>
+                <img src="data:image/png;base64,{{ image_base64 }}" alt="服务器状态饼状图">
+                <p>运行时间: {{ uptime }}</p>
+                <p>系统负载: {{ load_avg }}</p>
+                <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
+                <p>当前时间: {{ current_time }}</p>
+            </div>
+            """
+
+            # 渲染 HTML
+            template = Template(TMPL)
+            html = template.render(
+                image_base64=image_base64,
+                uptime=self._get_uptime(),
+                load_avg=self._get_load_avg(),
+                net_sent=self._bytes_to_mb(net.bytes_sent),
+                net_recv=self._bytes_to_mb(net.bytes_recv),
+                current_time=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            )
+
+            # 生成图片
+            url = await self.html_render(html)
+            yield event.image_result(url)
 
         except Exception as e:
             yield event.plain_result(f"⚠️ 状态获取失败: {str(e)}")
-
-    def _create_status_image(self, status_data: dict) -> str:
-        """创建状态信息的图像"""
-        sns.set_theme(style="darkgrid") # 设置主题为暗黑网格
-        plt.figure(figsize=(8, 10)) # 设置图片大小
-
-        # 绘制文本信息
-        text_str = "️ 服务器状态报告\n------------------\n"
-        for key, value in status_data.items():
-            text_str += f"• {key}: {value}\n"
-        plt.text(0.1, 0.95, text_str, fontsize=12, verticalalignment='top', family='monospace', color='white')
-
-        plt.axis('off') # 隐藏坐标轴
-        plt.gca().set_facecolor('black') # 设置背景颜色为黑色
-        plt.gcf().set_facecolor('black') # 设置整个图片背景颜色为黑色
-
-        # 保存图像到内存
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', bbox_inches='tight', pad_inches=0.5, facecolor='black')
-        buffer.seek(0)
-        image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
-
-        plt.clf() # 清理图片，防止内存泄漏。
-        return image_base64
 
     @staticmethod
     def _bytes_to_gb(bytes_num: int) -> float:

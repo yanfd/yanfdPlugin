@@ -44,6 +44,7 @@ class ServerMonitor(Star):
         except AttributeError:
             return "不可用（Windows系统）"
 
+
     @command("状态查询", alias=["status"])
     async def server_status(self, event):
         try:
