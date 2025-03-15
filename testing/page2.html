@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>居中容器</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #333;
+            margin: 0;
+        }
+
+        .container {
+            width: 80vw; /* 使用视口宽度单位 */
+            height: 80vh; /* 使用视口高度单位 */
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+        }
+        .info {
+            flex: 1;
+            padding-right: 2rem;
+        }
+        .info p {
+            font-size: 1rem;
+            color: #070707;
+            margin: 0.75rem 0;
+        }
+        .charts {
+            flex: 1;
+            display: flex;
+            justify-content: space-around;
+        }
+        .chart img {
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info">
+            <p>系统信息: {{ system_info }}</p>
+            <p>运行时间: {{ uptime }}</p>
+            <p>系统负载: {{ load_avg }}</p>
+            <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
+            <p>当前时间: {{ current_time }}</p>
+        </div>
+        <div class="charts">
+            <div class="chart">
+                <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
+            </div>
+            <div class="chart">
+                <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
+            </div>
+            <div class="chart">
+                <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import io
 import base64
 from jinja2 import Template
+from PIL import Image
+import requests
+from io import BytesIO
 
 @register("状态监控", "腾讯元宝&Meguminlove", "增强版状态监控插件", "1.1.4", "https://github.com/Meguminlove/astrbot_plugin_server_status")
 class ServerMonitor(Star):
@@ -58,29 +61,86 @@ class ServerMonitor(Star):
             net = psutil.net_io_counters()
 
             # 生成饼状图
-            cpu_image_base64 = self._create_pie_chart(cpu_usage, 'CPU')
-            mem_image_base64 = self._create_pie_chart(mem.percent, 'MEM')
-            disk_image_base64 = self._create_pie_chart(disk.percent, 'DISK')
+            cpu_image_base64 = self._create_pie_chart(cpu_usage, '')
+            mem_image_base64 = self._create_pie_chart(mem.percent, '')
+            disk_image_base64 = self._create_pie_chart(disk.percent, '')
 
             # Jinja2 模板
             TMPL = """
-            <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-                <div style="text-align: center;">
-                    <h1>服务器状态报告</h1>
-                    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
-                        <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
-                        <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
-                        <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
-                    </div>
-                    <div>
+            <!DOCTYPE html>
+            <html lang="zh-CN">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>服务器状态报告</title>
+                <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+                <style>
+                    body {
+                        font-family: 'Roboto', sans-serif;
+                        background-color: #2a2a2a;
+                        margin: 0;
+                        padding: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                    }
+                    .container {
+                        background-color: #ffffff;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        padding: 1.5rem;
+                        max-width: 800px;
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .info {
+                        flex: 1;
+                        padding-right: 2rem;
+                    }
+                    .info p {
+                        padding-left: 2rem;
+                        font-size: 1rem;
+                        color: #4a5568;
+                        margin: 0.75rem 0;
+                    }
+                    .charts {
+                        flex: 1;
+                        display: flex;
+                        justify-content: space-around;
+                    }
+                    .chart img {
+                        width: 120px;
+                        height: 120px;
+                        border-radius: 50%;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="info">
                         <p>系统信息: {{ system_info }}</p>
                         <p>运行时间: {{ uptime }}</p>
                         <p>系统负载: {{ load_avg }}</p>
                         <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
                         <p>当前时间: {{ current_time }}</p>
                     </div>
+                    <div class="charts">
+                        <div class="chart">
+                            <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
+                        </div>
+                        <div class="chart">
+                            <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
+                        </div>
+                        <div class="chart">
+                            <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </body>
+            </html>
             """
 
             # 渲染 HTML
@@ -99,10 +159,38 @@ class ServerMonitor(Star):
 
             # 生成图片
             url = await self.html_render(html, {})
-            yield event.image_result(url)
+
+            # 从 URL 加载图片
+            response = requests.get(url)
+            response.raise_for_status()
+            pic = Image.open(BytesIO(response.content))
+
+            width, height = pic.size
+            crop_width = int(width * 0.7)
+            crop_height = int(height * 0.4)
+
+            left = (width - crop_width) // 2
+            top = (height - crop_height) // 2
+            right = left + crop_width
+            bottom = top + crop_height
+
+            # 边界检查
+            left = max(0, left)
+            top = max(0, top)
+            right = min(width, right)
+            bottom = min(height, bottom)
+
+            if left < right and top < bottom:
+                pic = pic.crop((left, top, right, bottom))
+                pic.save("status.png")
+                yield event.image_result("status.png")
+            else:
+                yield event.plain_result(f"⚠️ 裁剪区域无效")
 
         except Exception as e:
             yield event.plain_result(f"⚠️ 状态获取失败: {str(e)}")
+
+
 
     def _create_pie_chart(self, value: float, label: str) -> str:
         """创建饼状图"""
@@ -110,10 +198,10 @@ class ServerMonitor(Star):
         plt.figure(figsize=(4, 4))
         labels = [label, '']
         sizes = [value, 100 - value]
-        colors = ['gray', 'lightgray']
-        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        colors = ['#4c51bf', '#e2e8f0']
+        plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90, wedgeprops={'edgecolor': 'white', 'linewidth': 2})
         plt.axis('equal')
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png', bbox_inches='tight', transparent=True)
         buffer.seek(0)
         image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
         plt.clf()
