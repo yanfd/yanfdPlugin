@@ -39,7 +39,7 @@ class ServerMonitor(Star):
             time_units.append(f"{hours}小时")
         if minutes > 0:
             time_units.append(f"{minutes}分")
-        time_units.append(f"{seconds}秒")
+        #time_units.append(f"{seconds}秒")
         
         return " ".join(time_units)
 
@@ -68,79 +68,102 @@ class ServerMonitor(Star):
             # Jinja2 模板
             TMPL = """
             <!DOCTYPE html>
-            <html lang="zh-CN">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>服务器状态报告</title>
-                <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-                <style>
-                    body {
-                        font-family: 'Roboto', sans-serif;
-                        background-color: #2a2a2a;
-                        margin: 0;
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                    }
-                    .container {
-                        background-color: #ffffff;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        padding: 1.5rem;
-                        max-width: 800px;
-                        width: 100%;
-                        display: flex;
-                        align-items: center;
-                    }
-                    .info {
-                        flex: 1;
-                        padding-right: 2rem;
-                    }
-                    .info p {
-                        padding-left: 2rem;
-                        font-size: 1rem;
-                        color: #4a5568;
-                        margin: 0.75rem 0;
-                    }
-                    .charts {
-                        flex: 1;
-                        display: flex;
-                        justify-content: space-around;
-                    }
-                    .chart img {
-                        width: 120px;
-                        height: 120px;
-                        border-radius: 50%;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="info">
-                        <p>系统信息: {{ system_info }}</p>
-                        <p>运行时间: {{ uptime }}</p>
-                        <p>系统负载: {{ load_avg }}</p>
-                        <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
-                        <p>当前时间: {{ current_time }}</p>
-                    </div>
-                    <div class="charts">
-                        <div class="chart">
-                            <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
-                        </div>
-                        <div class="chart">
-                            <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
-                        </div>
-                        <div class="chart">
-                            <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
-                        </div>
-                    </div>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器状态报告</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+       <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #2a2a2a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+        }
+        .info {
+            flex: 1;
+        }
+        .info h2 {
+            padding-top: 0.2rem;
+            padding-left: 2rem;
+            font-size: 1.2rem;
+            color: #4a5568;
+            margin: 0.75rem 0;
+        }
+        .charts-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .banner {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 1px;
+            width: 100%;
+        }
+        .banner h1 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        .charts {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            align-items: center; /* 垂直居中 */
+        }
+        .chart img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info">
+            <h2>系统信息: {{ system_info }}</h2>
+            <h2>运行时间: {{ uptime }}</h2>
+            <h2>系统负载: {{ load_avg }}</h2>
+            <h2>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</h2>
+            <h2>当前时间: {{ current_time }}</h2>
+        </div>
+        <div class="charts-container">
+            <div class="banner">
+                <h1>CPU</h1>
+                <h1>MEM</h1>
+                <h1>DISK</h1>
+            </div>
+            <div class="charts">
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
                 </div>
-            </body>
-            </html>
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
+                </div>
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
             """
 
             # 渲染 HTML

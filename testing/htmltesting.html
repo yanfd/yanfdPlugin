@@ -24,7 +24,6 @@
             max-width: 800px;
             width: 100%;
             display: flex;
-            align-items: center;
         }
         .info {
             flex: 1;
@@ -36,10 +35,27 @@
             color: #4a5568;
             margin: 0.75rem 0;
         }
-        .charts {
+        .charts-container {
             flex: 1;
             display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .banner {
+            display: flex;
             justify-content: space-around;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+        .banner h1 {
+            font-size: 1.5rem;
+            color: #333;
+        }
+        .charts {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            align-items: center; /* 垂直居中 */
         }
         .chart img {
             width: 120px;
@@ -47,25 +63,10 @@
             border-radius: 50%;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-       .banner {
-            display: flex;
-            align-items: top;
-            margin-bottom: 1rem;
-        }
-       }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="banner">
-            <div class="info"><p></p></div>
-            <div class="charts">
-                <h1>CPU</h1>
-                <h1>MEM</h1>
-                <h1>DISK</h1>
-            </div>
-
-        </div>
         <div class="info">
             <p>系统信息: {{ system_info }}</p>
             <p>运行时间: {{ uptime }}</p>
@@ -73,15 +74,22 @@
             <p>网络流量: ↑{{ net_sent }}MB ↓{{ net_recv }}MB</p>
             <p>当前时间: {{ current_time }}</p>
         </div>
-        <div class="charts">
-            <div class="chart">
-                <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
+        <div class="charts-container">
+            <div class="banner">
+                <h1>CPU</h1>
+                <h1>MEM</h1>
+                <h1>DISK</h1>
             </div>
-            <div class="chart">
-                <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
-            </div>
-            <div class="chart">
-                <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+            <div class="charts">
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ cpu_image }}" alt="CPU使用率">
+                </div>
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ mem_image }}" alt="内存使用率">
+                </div>
+                <div class="chart">
+                    <img src="data:image/png;base64,{{ disk_image }}" alt="磁盘使用率">
+                </div>
             </div>
         </div>
     </div>
