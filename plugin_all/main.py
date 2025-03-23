@@ -1,5 +1,8 @@
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
+import requests
 from astrbot.api.star import Context, Star, register
+from PIL import Image
+from io import BytesIO
 
 @register("YANFD_Plugins", "YANFD", "测试集", "1.0", "repo url")
 class YANFD_Plugin(Star):
@@ -40,51 +43,58 @@ class YANFD_Plugin(Star):
     def clutter():
         pass
 
-    @permission_type(PermissionType.ADMIN)
     @clutter.command("github_status")
     async def github_status(self, event: AstrMessageEvent):
         try:
             git_TMPL = '''
-            <!DOCTYPE html>
-    <html>
-    <head>
-    <title>Markdown to HTML</title>
-    <style>
-    .center {
-        text-align: center;
-    }
-    .flex-center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap; /* Allows icons to wrap on smaller screens */
-    }
-    .icon {
-        width: 30px;
-        margin: 5px; /* Adds spacing between icons */
-    }
-    .left-image {
-        float: left;
-        width: 400px;
-    }
-    .right-image {
-        float: right;
-        width: 400px;
-    }
-    .clearfix::after {
-        content: "";
-        clear: both;
-        display: table;
-    }
-    </style>
-    </head>
-    <body>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Markdown to HTML</title>
+<style>
+body {
+    background-color: #0c1117;
+    margin: 0;
+}
 
-    <div class="center">
-    <a href="#"><img align="center" src="https://github.com/yanfd/yanfd/blob/main/banner.png" alt="Banner"></a>
-    </div>
+.center {
+    text-align: center;
+}
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.icon {
+    width: 30px;
+    margin: 5px;
+}
+.left-image, .right-image {
+    width: 45%;
+    max-width: 450px;
+    margin: 10px 6%; /* Adjust margin for centering */
+    padding-left: 30px;
+    display: inline-block;
+}
+.banner {
+    max-width: 90%;
+    height: auto;
+}
+.clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+</style>
+</head>
+<body>
 
-    <div class="center">
+<div class="center">
+    <a href="#"><img class="banner" align="center" src="https://raw.githubusercontent.com/yanfd/yanfd/main/banner.png" alt="Banner"></a>
+</div>
+
+<div class="center">
     <div class="flex-center">
         <p>Maintainer of <a href="https://gallery.yanfd.tech/">ALMOST HUMAN GALLERY</a><br/>
         BLOG: <a href="https://www.yanfd.tech/">JOYLAB</a></p>
@@ -105,17 +115,17 @@ class YANFD_Plugin(Star):
         <img class="icon" alt="C++" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-line.svg" />
         <img class="icon" alt="GitHub" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" />
     </div>
-    </div>
+</div>
 
-    <hr>
+<hr>
 
-    <div class="clearfix">
-    <a href="#"><img class="left-image" alt="这是生成的图片，无互动" src="https://github.com/yanfd/yanfd/blob/main/metrics.left.svg"></a>
-    <a href="#"><img class="right-image" alt="这是生成的图片，无互动" src="https://github.com/yanfd/yanfd/blob/main/metrics.right.svg"></a>
-    </div>
+<div class="clearfix">
+    <a href="#"><img class="left-image" alt="这是生成的图片，无互动" src="https://raw.githubusercontent.com/yanfd/yanfd/main/metrics.left.svg"></a>
+    <a href="#"><img class="right-image" alt="这是生成的图片，无互动" src="https://raw.githubusercontent.com/yanfd/yanfd/main/metrics.right.svg"></a>
+</div>
 
-    </body>
-    </html>
+</body>
+</html>
             '''
             # 生成图片
             url = await self.html_render(git_TMPL, {})
